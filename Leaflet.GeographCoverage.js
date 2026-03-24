@@ -36,10 +36,11 @@
 L.GeographCoverage = L.FeatureGroup.extend({
 	options: {
 		bounds: L.latLngBounds(L.latLng(49.863788, -13.688451), L.latLng(60.860395, 1.795260)), 
-		minZoom: 13, maxZoom: 17,
+		minZoom: 13, maxZoom: 18,
 		squareScale: 'square',
 		query: '',
-		user_id: null
+		user_id: null,
+		opacity: 1
 	},
 
 	initialize: function (options) {
@@ -57,6 +58,14 @@ L.GeographCoverage = L.FeatureGroup.extend({
         */
         onAdd: function (map) {
             map.on('moveend', this.requestData, this);
+
+	    //we dont can't add circles to markerPane, as the not really clickable markers, in normal markerPane, may overlap real clickable markers!
+
+            var pane = map.getPane('coveragePane') || map.createPane('coveragePane');
+	    pane.style.zIndex = 300; //above tilePane, but below shadowPane
+	    pane.style.pointerEvents = 'none';  //see https://leafletjs.com/examples/map-panes/
+  	    L.DomUtil.setOpacity(pane, this.options.opacity);
+
             this._map = map;
             this.requestData();
         },
@@ -71,6 +80,26 @@ L.GeographCoverage = L.FeatureGroup.extend({
             this._labels = [];
 	    this.outputStatus('');
         },
+
+        /**
+            Redraws the coverage, call this if you change the query, user_id, or even squareScale in options
+            @public
+        */
+	Reset: function () {
+                this.clearLayers();
+            	this._circles = [];
+	        this._labels = [];
+		this.requestData();
+		return this;
+	},
+
+	setOpacity: function (opacity) {
+	        this.options.opacity = opacity;
+                var pane = map.getPane('coveragePane') || map.createPane('coveragePane');
+		L.DomUtil.setOpacity(pane, this.options.opacity);
+        	return this;
+	},
+
         /**
             Send a query request for JSONP data.
             @private
@@ -101,17 +130,22 @@ L.GeographCoverage = L.FeatureGroup.extend({
 				if (vgr && vgr.length >0) myriads.push(vgr);
 				data.myriads = myriads.join(',');
 			}
+			var resolution = 100;
 		} else {
 			var url = "https://www.geograph.org.uk/stuff/squares.json.php";
 			myriads = new Array();
+			var resolution = 1000;
 		}
+
+		var height = map.distance(bounds.getSouthWest(),bounds.getNorthWest());
+		this._extra_class = ((height/resolution) < 8)?'-large':'';
 
             if (zoom >= this.options.minZoom && zoom <= this.options.maxZoom) {
 		var ajaxRequest = (window.reqwest)?reqwest:$.ajax;
                 ajaxRequest({
                     url: url+"?callback=?",
                     data: data,
-			 type: 'jsonp',
+		    type: 'jsonp',
                     success: function (response) { self.parseData(response); }
                 });
             } else {
@@ -144,6 +178,7 @@ L.GeographCoverage = L.FeatureGroup.extend({
 
 	outputStatus: function (text) {
 		document.getElementById('message').innerHTML = text;
+		return this;
 	},
 
 	/**
@@ -171,7 +206,7 @@ L.GeographCoverage = L.FeatureGroup.extend({
 		this.outputStatus("Adding "+(data.markers.length)+" Squares...");
 
 			for (var i = 0; i < data.markers.length; i++) {
-				id = data.markers[i].gr;
+				id = data.markers[i].gr+this._extra_class;
 				if (this._labels[id] && this._labels[id] != null) {
 			            this._labels[id].old = false;
                                 } else {
@@ -179,13 +214,24 @@ L.GeographCoverage = L.FeatureGroup.extend({
 
 					//this._circles[id] = L.circleMarker(labelPos, {radius: 10});
 
+					//if ((data.markers[i].c > 999 && zoom == 13) || (data.markers[i].c > 99 && zoom == 15))
+					//	data.markers[i].c = '<div style="transform:rotate(-35deg)">'+data.markers[i].c.toString()+'</div>';
+					if (data.markers[i].c > 999)
+						data.markers[i].c = '<div style="font-size:0.7em">'+data.markers[i].c.toString()+'</div>';
+					else if (data.markers[i].c > 99)
+						data.markers[i].c = '<div style="font-size:0.85em">'+data.markers[i].c.toString()+'</div>';
+
+					if (data.markers[i].g != undefined && data.markers[i].g==0)
+						data.markers[i].c = '<div style="color:gray">'+data.markers[i].c.toString()+'</div>';
+
 					this._labels[id] = L.marker(labelPos, {
 			                        icon: L.divIcon({ 
-							iconSize: [20,20],
+							iconSize: [40,40],
 							html: data.markers[i].c.toString(),
-							className: data.markers[i].r?'mynumbern':'mynumbert'
+							className: (data.markers[i].r?'coverage-marker-normal':'coverage-marker-highlight')+this._extra_class
 						}),
-			                        title: id
+						pane: 'coveragePane',
+			                        title: data.markers[i].gr
 			                });
 
 					//this.addLayer(this._circles[id]);

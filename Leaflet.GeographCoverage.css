@@ -1,17 +1,37 @@
-div.mynumbern, div.mynumbert {
+div.coverage-marker-normal, div.coverage-marker-highlight {
+  opacity: 0.92;
+  text-align: center;
+  position: absolute;
+  overflow: hidden;
+  color: #FF0000;
+  line-height:40px;
+  font-size: 20px;
+  font-family: 'Trebuchet MS','Comic Sans MS',Georgia,Verdana,Arial,serif;
+  font-weight: bold;
+  text-shadow: 1px 1px 1px black;
+
+}
+div.coverage-marker-highlight {
+        color: #FF00FF;
+}
+
+
+div.coverage-marker-normal-large, div.coverage-marker-highlight-large {
+        width:  100px !important;
+        margin-left: -50px !important;
   opacity: 0.8;
   text-align: center;
   position: absolute;
   overflow: hidden;
-  background-color: #FF0000;
-  border-radius: 50%;
-  color: black;
-  line-height:20px;
-  font-size: 10px;
-  font-family: 'verdana';
+  color: #FF0000;
+  line-height:40px;
+  font-size: 40px;
+  font-family: 'Trebuchet MS','Comic Sans MS',Georgia,Verdana,Arial,serif;
   font-weight: bold;
-  box-shadow: 3px 3px 8px #999;
+  text-shadow: 1px 1px 2px black;
+
 }
-div.mynumbert {
-        background-color: #FF00FF;
+div.coverage-marker-highlight-large {
+        color: #FF00FF;
 }
+
