@@ -10,7 +10,7 @@ https://www.geograph.org.uk/contact.php
 
 
 ## Prerequisites:
-*   https://github.com/ded/reqwest
+* Not required, but if have GeographScout as well, it can utulize it's cache instead of making a request on every mouse move
 
 ## Minimal example
 demo: https://www.geograph.org/leaflet/GeographCoverage-example.html
