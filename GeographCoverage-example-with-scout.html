@@ -1,0 +1,56 @@
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.4/leaflet.css" rel="stylesheet" type="text/css" />
+
+
+	<!-- load leaflet -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.4/leaflet-src.js"></script>
+
+	<!-- coverage layer -->
+	<link href="Leaflet.GeographCoverage.css" rel="stylesheet" type="text/css" />
+        <script src="Leaflet.GeographCoverage.js"></script>
+
+	<!-- also load scount -->
+	<script src="/js/Leaflet.GeographScout.js"></script>
+
+	<!-- setup the map, and a div to contain the message from the coverage layer -->
+
+	<div id="map" style="width:800px; height:600px"></div>
+        <div id="message" style="z-index:10000;position:fixed;top:0;left:50px;background-color:white;font-size:1em;font-family:sans-serif;opacity:0.8"></div>
+
+	<script>
+
+	///////////////////////////////////////////////
+
+	var map = L.map('map', {
+		center: [54.4266, -3.1557], zoom: 13,
+		minZoom: 6, maxZoom: 18
+	});
+
+	//useful example base map
+	var osmUrl='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+	var osmAttrib='Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors';
+	var osm = new L.TileLayer(osmUrl, {minZoom: 6, maxZoom: 18, attribution: osmAttrib}).addTo(map);
+
+	var baseMaps = {
+		"OpenStreetMap": osm
+	};
+	
+	///////////////////////////////////////////////
+	// add the coverage layer
+
+	var overlayMaps = {};
+
+	var geographScout = L.geographScout();
+        overlayMaps["Geograph Scout"] = geographScout.addTo(map);
+
+	//create the coverage layer, but tell it about the scout
+	overlayMaps["Geograph Coverage"] =  L.geographCoverage({scoutLayer: geographScout}).addTo(map);
+
+	///////////////////////////////////////////////
+	// add the layer control to map
+
+	L.control.layers(baseMaps, overlayMaps, {collapsed: false}).addTo(map);
+
+	///////////////////////////////////////////////
+
+	</script>
+
