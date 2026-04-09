@@ -97,6 +97,13 @@ L.GeographCoverage = L.FeatureGroup.extend({
      @public
     */
     Reset: function () {
+	    //need to abort an 'inflight' request
+        if (typeof AbortController === 'function' && this._abortController) {
+            this._abortController.abort();
+        }
+    	if (this._currentXHR && this._currentXHR.abort) {
+            this._currentXHR.abort();
+        }
         this.clearLayers();
         this._circles = [];
         this._labels = [];
@@ -121,6 +128,10 @@ L.GeographCoverage = L.FeatureGroup.extend({
 	    bounds = map.getBounds(),
 	    self = this;
 
+    	if (typeof AbortController === 'function' && this._abortController) {
+        	this._abortController.abort();
+	    }
+
         // 1. Basic Zoom Guard
         if (zoom < this.options.minZoom || zoom > this.options.maxZoom) {
             this.clearLayers();
@@ -139,6 +150,8 @@ L.GeographCoverage = L.FeatureGroup.extend({
             if (!this._map.hasLayer(this.options.scoutLayer)) {
                 this.options.scoutLayer._onMapMove(null, this._map);
             }
+
+	    bounds = bounds.pad(0.1); //might as well oversample a little
 
             // Filter the shared cache for squares within the current map bounds
             const cachedSquares = Object.values(this.options.scoutLayer._localSquareCache).filter(sq => {
@@ -206,7 +219,13 @@ L.GeographCoverage = L.FeatureGroup.extend({
 			    var params = new URLSearchParams(data);
                 var self = this;
 
-                fetch(url+'?'+params.toString())
+        		let signal = null;
+		        if (typeof AbortController === 'function') {
+		            this._abortController = new AbortController();
+    		        signal = this._abortController.signal;
+	        	}
+
+                fetch(url+'?'+params.toString(), signal ? { signal: signal } : {})
                     .then(response => {
                         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         return response.json(); // This returns a promise containing the JSON
@@ -214,20 +233,27 @@ L.GeographCoverage = L.FeatureGroup.extend({
                     .then(jsonResponse => {
                         // This is your 'success' callback
                         self.parseData(jsonResponse);
+                        self._abortController = null; // Request is finished, clear the handle
                     })
                     .catch(err => {
-                        // This is your 'error' callback
+                        if (err.name === 'AbortError') {
+                            return; // Exit silently, as this is expected behavior
+                        }
                         console.error("GeographCoverage fetch failed:", err);
                         self.outputStatus("Error loading data.");
                     });
 
 	    	} else {
+			    if (this._currentXHR && this._currentXHR.abort) {
+		            this._currentXHR.abort();
+		        }
     			var ajaxRequest = (window.reqwest)?reqwest:$.ajax;
-    	        ajaxRequest({
+	            this._currentXHR = ajaxRequest({
             	    url: url,
                     data: data,
 			        type: 'json',
-            	    success: function (response) { self.parseData(response); }
+            	    success: function (response) { self.parseData(response); self._currentXHR = null; },
+                    error: function (err) { self._currentXHR = null; }
                 });
 	        }
         } else {
